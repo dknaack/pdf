@@ -36,16 +36,27 @@ typedef struct {
 	i32 object_count;
 } pdf_file;
 
-static i32 pdf_begin_object(pdf_file *pdf)
+static i32 pdf_new_object(pdf_file *pdf)
 {
 	pdf_object *o = calloc(1, sizeof(pdf_object));
 	o->offset = ftell(pdf->file);
 	*pdf->tail = o;
 	pdf->tail = &o->next;
 
-	i32 i = ++pdf->object_count;
-	fprintf(pdf->file, "%d 0 obj\n", i);
-	return i;
+	i32 id = ++pdf->object_count;
+	return id;
+}
+
+static void pdf_begin_object(pdf_file *pdf, i32 id)
+{
+	fprintf(pdf->file, "%d 0 obj\n", id);
+}
+
+static i32 pdf_begin_new_object(pdf_file *pdf)
+{
+	i32 id = pdf_new_object(pdf);
+	pdf_begin_object(pdf, id);
+	return id;
 }
 
 static void pdf_end_object(pdf_file *pdf)
@@ -68,16 +79,16 @@ main(void)
 	fprintf(pdf.file, "%%PDF-1.7\n");
 
     // Catalog and Pages objects
-	i32 catalog = pdf_begin_object(&pdf);
+	i32 catalog = pdf_begin_new_object(&pdf);
     fprintf(pdf.file, "<< /Type /Catalog /Pages 2 0 R >>\n");
 	pdf_end_object(&pdf);
 
-	pdf_begin_object(&pdf);
+	pdf_begin_new_object(&pdf);
     fprintf(pdf.file, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n");
 	pdf_end_object(&pdf);
 
     // Page object
-	pdf_begin_object(&pdf);
+	pdf_begin_new_object(&pdf);
 	fprintf(pdf.file,
 		"<< /Type /Page\n"
 			"/Parent 2 0 R\n"
@@ -88,7 +99,7 @@ main(void)
 	pdf_end_object(&pdf);
 
     // Page content
-	pdf_begin_object(&pdf);
+	pdf_begin_new_object(&pdf);
 	fprintf(pdf.file,
 		"<< /Length 44 >>\n"
 		"stream\n"
@@ -101,7 +112,7 @@ main(void)
 	pdf_end_object(&pdf);
 
     // Resources
-	pdf_begin_object(&pdf);
+	pdf_begin_new_object(&pdf);
 	fprintf(pdf.file,
 		"<< /Type /Font"
 			"/Subtype /Type1"
@@ -109,7 +120,7 @@ main(void)
 	pdf_end_object(&pdf);
 
     // Font
-	pdf_begin_object(&pdf);
+	pdf_begin_new_object(&pdf);
     fprintf(pdf.file, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\n");
 	pdf_end_object(&pdf);
 
