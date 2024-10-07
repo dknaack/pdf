@@ -113,9 +113,12 @@ main(void)
 		"<< /Length 44 >>\n"
 		"stream\n"
 		"BT\n"
-		"/F1 24 Tf\n"
+		"/F1 12 Tf\n"
 		"100 700 Td\n"
-		"(Hello, PDF!) Tj\n"
+		"12 TL\n"
+		"(This is the first line of the paragraph. It will be displayed in the PDF.) Tj\n"
+		"T* (And here is the second line of the paragraph.) Tj\n"
+		"T* (The text can continue with as many lines as needed.) Tj\n"
 		"ET\n"
 		"endstream\n");
 	pdf_end_object(&pdf);
