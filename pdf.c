@@ -128,11 +128,6 @@ main(void)
 			"/BaseFont /Helvetica >>");
 	pdf_end_object(&pdf);
 
-    // Font
-	pdf_begin_new_object(&pdf);
-    fprintf(pdf.file, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\n");
-	pdf_end_object(&pdf);
-
     // Cross-reference table
     isize xref_offset = ftell(pdf.file);
     fprintf(pdf.file, "xref\n");
