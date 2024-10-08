@@ -1,3 +1,4 @@
+#include <hb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -71,14 +72,14 @@ main(void)
 {
 	// Create the pdf file
 	pdf_file pdf = {0};
-    pdf.file = fopen("output.pdf", "wb");
+	pdf.file = fopen("output.pdf", "wb");
 	pdf.object_count = 1;
 	pdf.max_object_count = 1024;
 	pdf.objects = calloc(pdf.max_object_count, sizeof(*pdf.objects));
-    if (pdf.file == NULL) {
-        perror("Error opening the PDF file");
-        return 1;
-    }
+	if (pdf.file == NULL) {
+		perror("Error opening the PDF file");
+		return 1;
+	}
 
 	fprintf(pdf.file, "%%PDF-1.7\n");
 
@@ -88,26 +89,26 @@ main(void)
 	i32 page_content = pdf_new_object(&pdf);
 	i32 resources = pdf_new_object(&pdf);
 
-    // Catalog and Pages objects
-    fprintf(pdf.file, "<< /Type /Catalog /Pages %d 0 R >>\n", pages);
+	// Catalog and Pages objects
+	fprintf(pdf.file, "<< /Type /Catalog /Pages %d 0 R >>\n", pages);
 	pdf_end_object(&pdf);
 
 	pdf_begin_object(&pdf, pages);
-    fprintf(pdf.file, "<< /Type /Pages /Kids [%d 0 R] /Count 1 >>\n", page);
+	fprintf(pdf.file, "<< /Type /Pages /Kids [%d 0 R] /Count 1 >>\n", page);
 	pdf_end_object(&pdf);
 
-    // Page object
+	// Page object
 	pdf_begin_object(&pdf, page);
 	fprintf(pdf.file,
 		"<< /Type /Page\n"
-			"/Parent %d 0 R\n"
-			"/MediaBox [0 0 612 792]\n"
-			"/Contents %d 0 R\n"
-			"/Resources << /Font << /F1 %d 0 R >> >>\n"
+		"/Parent %d 0 R\n"
+		"/MediaBox [0 0 612 792]\n"
+		"/Contents %d 0 R\n"
+		"/Resources << /Font << /F1 %d 0 R >> >>\n"
 		">>\n", pages, page_content, resources);
 	pdf_end_object(&pdf);
 
-    // Page content
+	// Page content
 	pdf_begin_object(&pdf, page_content);
 	fprintf(pdf.file,
 		"<< /Length 44 >>\n"
@@ -123,32 +124,32 @@ main(void)
 		"endstream\n");
 	pdf_end_object(&pdf);
 
-    // Resources
+	// Resources
 	pdf_begin_object(&pdf, resources);
 	fprintf(pdf.file,
 		"<< /Type /Font"
-			"/Subtype /Type1"
-			"/BaseFont /Helvetica >>");
+		"/Subtype /Type1"
+		"/BaseFont /Helvetica >>");
 	pdf_end_object(&pdf);
 
-    // Cross-reference table
-    isize xref_offset = ftell(pdf.file);
-    fprintf(pdf.file, "xref\n");
-    fprintf(pdf.file, "0 %d\n", pdf.object_count);
-    fprintf(pdf.file, "0000000000 65535 f \n");
+	// Cross-reference table
+	isize xref_offset = ftell(pdf.file);
+	fprintf(pdf.file, "xref\n");
+	fprintf(pdf.file, "0 %d\n", pdf.object_count);
+	fprintf(pdf.file, "0000000000 65535 f \n");
 	for (i32 i = 1; i < pdf.object_count; i++) {
 		pdf_object *o = &pdf.objects[i];
 		fprintf(pdf.file, "%010zd %05d %c\n", o->offset,
 			o->allocated ? 0 : 65535, o->allocated ? 'n' : 'f');
 	}
 
-    // Trailer
-    fprintf(pdf.file, "trailer\n");
-    fprintf(pdf.file, "<< /Size %d /Root %d 0 R >>\n", pdf.object_count + 1, catalog);
-    fprintf(pdf.file, "startxref\n");
-    fprintf(pdf.file, "%zd\n", xref_offset);
-    fprintf(pdf.file, "%%EOF\n");
+	// Trailer
+	fprintf(pdf.file, "trailer\n");
+	fprintf(pdf.file, "<< /Size %d /Root %d 0 R >>\n", pdf.object_count + 1, catalog);
+	fprintf(pdf.file, "startxref\n");
+	fprintf(pdf.file, "%zd\n", xref_offset);
+	fprintf(pdf.file, "%%EOF\n");
 
-    fclose(pdf.file);
-    return 0;
+	fclose(pdf.file);
+	return 0;
 }
