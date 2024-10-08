@@ -124,6 +124,29 @@ main(void)
 		"endstream\n");
 	pdf_end_object(&pdf);
 
+	hb_blob_t *blob = hb_blob_create_from_file_or_fail("/usr/share/fonts/TTF/Arial.TTF");
+	hb_face_t *face = hb_face_create(blob, 0);
+	hb_font_t *hb_font = hb_font_create(face);
+
+	hb_buffer_t *buf = hb_buffer_create();
+	hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
+	hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
+	hb_buffer_set_language(buf, hb_language_from_string("en", -1));
+
+	char *word = "Hello";
+	hb_buffer_add_utf8(buf, word, -1, 0, -1);
+	hb_shape(hb_font, buf, NULL, 0);
+
+	u32 glyph_count;
+	hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
+
+	double total_width = 0.0;
+	for (unsigned int i = 0; i < glyph_count; i++) {
+		total_width += glyph_pos[i].x_advance / 64.0;
+	}
+
+	printf("Total width of the word '%s': %f\n", word, total_width);
+
 	// Resources
 	pdf_begin_object(&pdf, resources);
 	fprintf(pdf.file,
