@@ -22,8 +22,8 @@ typedef float   f32;
 typedef int32_t b32;
 
 typedef struct {
-    char *at;
-    usize length;
+	char *at;
+	usize length;
 } string;
 
 typedef struct pdf_object pdf_object;
@@ -67,6 +67,27 @@ static void pdf_end_object(pdf_file *pdf)
 	fprintf(pdf->file, "endobj\n");
 }
 
+static str read_file(const char *filename)
+{
+	str result = {0};
+	FILE *file = fopen(filename, "rb");
+	if (file) {
+		fseek(file, 0, SEEK_END);
+		result.length = ftell(file);
+		fseek(file, 0, SEEK_SET);
+
+		result.at = malloc(result.length + 1);
+		if (result.at) {
+			fread(result.at, result.length, 1, file);
+			result.at[result.length] = '\0';
+		}
+
+		fclose(file);
+	}
+
+	return result;
+}
+
 int
 main(void)
 {
@@ -108,22 +129,7 @@ main(void)
 		">>\n", pages, page_content, resources);
 	pdf_end_object(&pdf);
 
-	// Page content
-	pdf_begin_object(&pdf, page_content);
-	fprintf(pdf.file,
-		"<< /Length 44 >>\n"
-		"stream\n"
-		"BT\n"
-		"/F1 12 Tf\n"
-		"100 700 Td\n"
-		"12 TL\n"
-		"(This is the first line of the paragraph. It will be displayed in the PDF.) Tj\n"
-		"T* (And here is the second line of the paragraph.) Tj\n"
-		"T* (The text can continue with as many lines as needed.) Tj\n"
-		"ET\n"
-		"endstream\n");
-	pdf_end_object(&pdf);
-
+	// Calculate the width of a word
 	hb_blob_t *blob = hb_blob_create_from_file_or_fail("/usr/share/fonts/TTF/Arial.TTF");
 	hb_face_t *face = hb_face_create(blob, 0);
 	hb_font_t *hb_font = hb_font_create(face);
@@ -138,6 +144,7 @@ main(void)
 	hb_shape(hb_font, buf, NULL, 0);
 
 	u32 glyph_count;
+	hb_glyph_info_t *glyph_info    = hb_buffer_get_glyph_infos(buf, &glyph_count);
 	hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
 
 	double total_width = 0.0;
@@ -147,6 +154,22 @@ main(void)
 
 	printf("Total width of the word '%s': %f\n", word, total_width);
 
+	// Page content
+	pdf_begin_object(&pdf, page_content);
+	fprintf(pdf.file,
+		"<< /Length 44 >>\n"
+		"stream\n"
+		"BT\n"
+		"/F1 12 Tf\n"
+		"100 700 Td\n"
+		"12 TL\n"
+		"<%04X> Tj\n"
+		"T* (And here is the second line of the paragraph.) Tj\n"
+		"T* (The text can continue with as many lines as needed.) Tj\n"
+		"ET\n"
+		"endstream\n", glyph_info[0].codepoint);
+	pdf_end_object(&pdf);
+
 	// Resources
 	pdf_begin_object(&pdf, resources);
 	fprintf(pdf.file,
@@ -154,6 +177,40 @@ main(void)
 		"/Subtype /Type1"
 		"/BaseFont /Helvetica >>");
 	pdf_end_object(&pdf);
+
+	pdf_begin_object(&pdf, font_descriptor);
+	pdf_end_object(&pdf);
+
+	pdf_begin_object(&pdf, font_stream);
+	pdf_end_object(&pdf);
+
+	// Font object
+	pdf_begin_object(&pdf, font);
+	fprintf(pdf.file,
+		"<< /Type /Font "
+		"   /Subtype /TrueType"
+		"   /BaseFont /F1"
+		"   /FontDescriptor %d 0 R"
+		"   /FirstChar 32 "
+		"   /LastChar 255 ",
+		font_descriptor);
+	fprintf(pdf.file, "/Widths [");  // Dummy widths for simplicity
+	for (int i = 32; i <= 255; i++) fprintf(pdf_file, "500 ");
+	fprintf(pdf.file, "] /ToUnicode 7 0 R >>\n");
+	pdf_end_object(&pdf);
+
+	// Font descriptor
+	pdf_begin_object(&pdf, font_descriptor);
+	fprintf(pdf.file, "<< /Type /FontDescriptor /FontName /F1 /FontFile2 8 0 R >>\n");
+	pdf_end_object(&pdf);
+
+	// Font data stream
+	pdf_begin_object(&pdf, font_stream);
+	fprintf(pdf.file, "stream\n");
+	fwrite(font_data, 1, font_size, pdf_file);
+	fprintf(pdf.file, "endstream\n");
+	pdf_end_object(&pdf.file);
+
 
 	// Cross-reference table
 	isize xref_offset = ftell(pdf.file);
