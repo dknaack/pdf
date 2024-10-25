@@ -24,7 +24,7 @@ typedef int32_t b32;
 typedef struct {
 	char *at;
 	usize length;
-} string;
+} str;
 
 typedef struct pdf_object pdf_object;
 struct pdf_object {
@@ -171,18 +171,9 @@ main(void)
 	pdf_end_object(&pdf);
 
 	// Resources
-	pdf_begin_object(&pdf, resources);
-	fprintf(pdf.file,
-		"<< /Type /Font"
-		"/Subtype /Type1"
-		"/BaseFont /Helvetica >>");
-	pdf_end_object(&pdf);
-
-	pdf_begin_object(&pdf, font_descriptor);
-	pdf_end_object(&pdf);
-
-	pdf_begin_object(&pdf, font_stream);
-	pdf_end_object(&pdf);
+	i32 font = resources;
+	i32 font_descriptor = pdf_new_object(&pdf);
+	i32 font_stream = pdf_new_object(&pdf);
 
 	// Font object
 	pdf_begin_object(&pdf, font);
@@ -195,22 +186,22 @@ main(void)
 		"   /LastChar 255 ",
 		font_descriptor);
 	fprintf(pdf.file, "/Widths [");  // Dummy widths for simplicity
-	for (int i = 32; i <= 255; i++) fprintf(pdf_file, "500 ");
-	fprintf(pdf.file, "] /ToUnicode 7 0 R >>\n");
+	for (int i = 32; i <= 255; i++) fprintf(pdf.file, "500 ");
+	fprintf(pdf.file, "] >>\n");
 	pdf_end_object(&pdf);
 
 	// Font descriptor
 	pdf_begin_object(&pdf, font_descriptor);
-	fprintf(pdf.file, "<< /Type /FontDescriptor /FontName /F1 /FontFile2 8 0 R >>\n");
+	fprintf(pdf.file, "<< /Type /FontDescriptor /FontName /F1 /FontFile2 %d 0 R >>\n", font_stream);
 	pdf_end_object(&pdf);
 
 	// Font data stream
+	str font_data = read_file("/usr/share/fonts/TTF/Arial.TTF");
 	pdf_begin_object(&pdf, font_stream);
-	fprintf(pdf.file, "stream\n");
-	fwrite(font_data, 1, font_size, pdf_file);
+	fprintf(pdf.file, "<< /Length %zd >>\nstream\n", font_data.length);
+	fwrite(font_data.at, 1, font_data.length, pdf.file);
 	fprintf(pdf.file, "endstream\n");
-	pdf_end_object(&pdf.file);
-
+	pdf_end_object(&pdf);
 
 	// Cross-reference table
 	isize xref_offset = ftell(pdf.file);
