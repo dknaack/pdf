@@ -186,6 +186,8 @@ main(void)
 		"   /LastChar 255 ",
 		font_descriptor);
 	fprintf(pdf.file, "/Widths [");
+
+	u32 upem = hb_face_get_upem(face);
 	for (int i = 32; i <= 255; i++) {
 		hb_position_t glyph_advance = 0;
 
@@ -194,7 +196,7 @@ main(void)
 			glyph_advance = hb_font_get_glyph_h_advance(hb_font, glyph);
 		}
 
-		int advance = (glyph_advance * 1000) / 2000;
+		int advance = (glyph_advance * 1000) / upem;
 		fprintf(pdf.file, "      %d\n", advance);
 	}
 
