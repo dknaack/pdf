@@ -185,8 +185,19 @@ main(void)
 		"   /FirstChar 32 "
 		"   /LastChar 255 ",
 		font_descriptor);
-	fprintf(pdf.file, "/Widths [");  // Dummy widths for simplicity
-	for (int i = 32; i <= 255; i++) fprintf(pdf.file, "500 ");
+	fprintf(pdf.file, "/Widths [");
+	for (int i = 32; i <= 255; i++) {
+		hb_position_t glyph_advance = 0;
+
+		hb_codepoint_t glyph;
+		if (hb_font_get_glyph(hb_font, i, 0, &glyph)) {
+			glyph_advance = hb_font_get_glyph_h_advance(hb_font, glyph);
+		}
+
+		int advance = (glyph_advance * 1000) / 2000;
+		fprintf(pdf.file, "      %d\n", advance);
+	}
+
 	fprintf(pdf.file, "] >>\n");
 	pdf_end_object(&pdf);
 
