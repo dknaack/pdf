@@ -43,6 +43,14 @@ typedef struct {
 	u16 upem;
 } font;
 
+typedef enum {
+	FONT_SERIF,
+	FONT_ITALIC,
+	FONT_BOLD,
+	FONT_BOLD_ITALIC,
+	FONT_COUNT,
+} font_id;
+
 typedef struct pdf_object pdf_object;
 struct pdf_object {
 	pdf_object *next;
@@ -515,6 +523,8 @@ static i32 pdf_embed_font(pdf_file *pdf, font font, i32 font_id)
 int
 main(void)
 {
+	str text = read_file("example.md");
+
 	// Create the pdf file
 	pdf_file pdf = {0};
 	pdf.file = fopen("output.pdf", "wb");
@@ -532,30 +542,45 @@ main(void)
 	pdf.page_tree = pdf_new_object(&pdf);
 
 	// Embed a font
-	font font = read_font("/usr/share/fonts/TTF/Times.TTF");
-	i32 font_resource = pdf_embed_font(&pdf, font, 1);
+	font fonts[FONT_COUNT] = {0};
+	i32 font_objects[FONT_COUNT] = {0};
+	char *font_filenames[] = {
+		"/usr/share/fonts/TTF/Times.TTF",
+		"/usr/share/fonts/TTF/Timesbd.TTF",
+		"/usr/share/fonts/TTF/Timesi.TTF",
+		"/usr/share/fonts/TTF/Timesbi.TTF",
+	};
+
+	for (font_id i = 0; i < FONT_COUNT; i++) {
+		fonts[i] = read_font(font_filenames[i]);
+		font_objects[i] = pdf_embed_font(&pdf, fonts[i], FONT_SERIF);
+	}
 
 	// Page content
 	i32 page_content = pdf_begin_new_object(&pdf);
 	{
+		font_id font_id = FONT_SERIF;
 		pdf_stream *s = pdf_stream_create(1024);
-		pdf_stream_puts(s,
+		pdf_stream_printf(s,
 			"BT\n"
-			"/F1 10 Tf\n"
+			"/F%d 10 Tf\n"
 			"11 TL\n"
-			"100 700 Td\n");
-
-		str text = S(
-			"This is a test to see if line breaking works. Therefore this "
-			"string has to be really long. Otherwise we are not going to see "
-			"if the text breaking algorithm even works or not since everything "
-			"could just fit on one line.");
-		pdf_stream_puts(s, "[(");
+			"100 700 Td\n"
+			"[(", font_id);
 
 		isize begin = 0;
 		isize page_width = 612;
 		isize width = 0.0f;
 		while (begin < text.length) {
+			if (text.at[begin] == '*' || text.at[begin] == '_') {
+				begin++;
+				font_id ^= FONT_ITALIC;
+				pdf_stream_printf(s,
+					")] TJ\n"
+					"/F%d 10 Tf\n"
+					"[(", font_id);
+			}
+
 			isize end = begin;
 
 			// skip to end of word
@@ -563,8 +588,13 @@ main(void)
 				end++;
 			}
 
+			b32 is_italic = text.at[end - 1] == '*';
+			if (is_italic) {
+				end--;
+			}
+
 			str word = substr(text, begin, end);
-			isize word_width = get_text_width(word, font);
+			isize word_width = get_text_width(word, fonts[font_id]);
 			isize font_height = 9;
 			isize margin = 200;
 			if (font_height * (word_width + width) > (page_width - margin) * 1000) {
@@ -574,9 +604,9 @@ main(void)
 
 			u16 prev = 0;
 			for (isize i = begin; i < end; i++) {
-				u16 curr = get_glyph_index(font.cmap, text.at[i]);
+				u16 curr = get_glyph_index(fonts[font_id].cmap, text.at[i]);
 				if (prev != 0) {
-					i16 k = get_kerning(font, prev, curr);
+					i16 k = get_kerning(fonts[font_id], prev, curr);
 					if (k != 0) {
 						pdf_stream_printf(s, ") %d (", -k);
 					}
@@ -591,13 +621,22 @@ main(void)
 				prev = curr;
 			}
 
+			if (is_italic) {
+				end++;
+				font_id ^= FONT_ITALIC;
+				pdf_stream_printf(s,
+					")] TJ\n"
+					"/F%d 10 Tf\n"
+					"[(", font_id);
+			}
+
 			// skip to next word
 			while (end < text.length && is_space(text.at[end])) {
 				end++;
 			}
 
 			pdf_stream_puts(s, " ");
-			width += word_width + get_text_width(S(" "), font);
+			width += word_width + get_text_width(S(" "), fonts[font_id]);
 			begin = end;
 		}
 
@@ -612,7 +651,11 @@ main(void)
 
 	// Resources
 	pdf_begin_object(&pdf, pdf.resources);
-	fprintf(pdf.file, "<< /Font << /F1 %d 0 R >> >>\n", font_resource);
+	fprintf(pdf.file, "<< /Font <<");
+	for (font_id i = 0; i < FONT_COUNT; i++) {
+		fprintf(pdf.file, " /F%d %d 0 R", i, font_objects[i]);
+	}
+	fprintf(pdf.file, " >> >>\n");
 	pdf_end_object(&pdf);
 
 	// Page Tree
