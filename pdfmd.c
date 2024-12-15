@@ -565,8 +565,7 @@ main(void)
 			"BT\n"
 			"/F%d 10 Tf\n"
 			"11 TL\n"
-			"100 700 Td\n"
-			"[(", font_id);
+			"100 700 Td\n", font_id);
 
 		isize begin = 0;
 		isize page_width = 612;
@@ -575,10 +574,7 @@ main(void)
 			if (text.at[begin] == '*' || text.at[begin] == '_') {
 				begin++;
 				font_id ^= FONT_ITALIC;
-				pdf_stream_printf(s,
-					")] TJ\n"
-					"/F%d 10 Tf\n"
-					"[(", font_id);
+				pdf_stream_printf(s, "/F%d 10 Tf\n", font_id);
 			}
 
 			isize end = begin;
@@ -598,9 +594,11 @@ main(void)
 			isize font_height = 9;
 			isize margin = 200;
 			if (font_height * (word_width + width) > (page_width - margin) * 1000) {
-				pdf_stream_puts(s, ")] TJ\nT* [(");
+				pdf_stream_puts(s, "T*\n");
 				width = 0;
 			}
+
+			pdf_stream_puts(s, "[(");
 
 			u16 prev = 0;
 			for (isize i = begin; i < end; i++) {
@@ -612,22 +610,15 @@ main(void)
 					}
 				}
 
-				if (text.at[i] == '\n') {
-					pdf_stream_puts(s, ")] TJ\nT* [(");
-				} else {
-					pdf_stream_printf(s, "%c", text.at[i]);
-				}
-
+				pdf_stream_printf(s, "%c", text.at[i]);
 				prev = curr;
 			}
 
+			pdf_stream_puts(s, " )] TJ\n");
 			if (is_italic) {
 				end++;
 				font_id ^= FONT_ITALIC;
-				pdf_stream_printf(s,
-					")] TJ\n"
-					"/F%d 10 Tf\n"
-					"[(", font_id);
+				pdf_stream_printf(s, "/F%d 10 Tf\n", font_id);
 			}
 
 			// skip to next word
@@ -635,7 +626,6 @@ main(void)
 				end++;
 			}
 
-			pdf_stream_puts(s, " ");
 			width += word_width + get_text_width(S(" "), fonts[font_id]);
 			begin = end;
 		}
