@@ -538,7 +538,7 @@ main(void)
 	// Page content
 	i32 page_content = pdf_begin_new_object(&pdf);
 	{
-		pdf_stream *s = pdf_stream_create(16);
+		pdf_stream *s = pdf_stream_create(1024);
 		pdf_stream_puts(s,
 			"BT\n"
 			"/F1 10 Tf\n"
