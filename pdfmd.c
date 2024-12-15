@@ -546,8 +546,8 @@ main(void)
 	i32 font_objects[FONT_COUNT] = {0};
 	char *font_filenames[] = {
 		"/usr/share/fonts/TTF/Times.TTF",
-		"/usr/share/fonts/TTF/Timesbd.TTF",
 		"/usr/share/fonts/TTF/Timesi.TTF",
+		"/usr/share/fonts/TTF/Timesbd.TTF",
 		"/usr/share/fonts/TTF/Timesbi.TTF",
 	};
 
