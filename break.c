@@ -138,19 +138,42 @@ main(void)
 		}
 	}
 
-	int *should_break = calloc(words.count + 1, sizeof(*should_break));
-	for (int i = words.count; i > 0; i = prev[i]) {
-		should_break[i] = true;
+	isize break_count = 0;
+	for (isize i = words.count; i > 0; i = prev[i]) {
+		break_count++;
 	}
 
-	for (int i = 0; i < words.count; i++) {
-		if (should_break[i]) {
-			printf("\n");
-		} else if (i != 0) {
-			printf(" ");
+	isize j = break_count;
+	int *breaks = calloc(break_count, sizeof(*breaks));
+	for (isize i = words.count; i > 0; i = prev[i]) {
+		breaks[--j] = i;
+	}
+
+	isize start = 0;
+	for (isize j = 0; j < break_count; j++) {
+		isize total_width = 0;
+		for (isize i = start; i < breaks[j]; i++) {
+			total_width += words.at[i].length;
 		}
 
-		printf("%.*s", (int)words.at[i].length, words.at[i].at);
+		isize gap_count = breaks[j] - start - 1;
+		isize remaining = line_width - total_width;
+		for (isize i = start; i < breaks[j]; i++) {
+			printf("%.*s", (int)words.at[i].length, words.at[i].at);
+			if (i < breaks[j] - 1) {
+				isize num_spaces = remaining / gap_count;
+				if (i - start < remaining % gap_count) {
+					num_spaces++;
+				}
+
+				for (isize k = 0; k < num_spaces; k++) {
+					putchar(' ');
+				}
+			}
+		}
+
+		start = breaks[j];
+		printf("\n");
 	}
 
 	printf("\n");
