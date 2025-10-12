@@ -115,7 +115,7 @@ main(void)
 		"et ipsum. Donec non urna eu tellus.");
 	str_array words = split(input);
 
-	int line_width = 32;
+	int line_width = 80;
 	int *cost = calloc(words.count + 1, sizeof(*cost));
 	int *prev = calloc(words.count + 1, sizeof(*cost));
 	for (isize j = 1; j <= words.count; j++) {
