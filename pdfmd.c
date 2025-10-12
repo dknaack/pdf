@@ -602,6 +602,10 @@ main(void)
 
 			u16 prev = 0;
 			for (isize i = begin; i < end; i++) {
+				if (text.at[i] == '\n') {
+					continue;
+				}
+
 				u16 curr = get_glyph_index(fonts[font_id].cmap, text.at[i]);
 				if (prev != 0) {
 					i16 k = get_kerning(fonts[font_id], prev, curr);
