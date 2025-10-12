@@ -130,7 +130,7 @@ main(void)
 				break;
 			}
 
-			int current_cost = (badness * badness) + cost[i];
+			int current_cost = (j == 0 ? 0 : badness * badness) + cost[i];
 			if (cost[j] > current_cost) {
 				cost[j] = current_cost;
 				prev[j] = i;
@@ -160,7 +160,9 @@ main(void)
 		isize remaining = line_width - total_width;
 		for (isize i = start; i < breaks[j]; i++) {
 			printf("%.*s", (int)words.at[i].length, words.at[i].at);
-			if (i < breaks[j] - 1) {
+			if (j == break_count - 1) {
+				printf(" ");
+			} else if (i < breaks[j] - 1) {
 				isize num_spaces = remaining / gap_count;
 				if (i - start < remaining % gap_count) {
 					num_spaces++;
