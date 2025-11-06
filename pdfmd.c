@@ -496,6 +496,18 @@ static i32 pdf_embed_font(pdf_file *pdf, font font, i32 font_id)
 	fprintf(pdf->file, "<< /Type /FontDescriptor /FontName /F%d /FontFile2 %d 0 R >>\n", font_id, font_stream);
 	pdf_end_object(pdf);
 
+	// Characters widths
+	i32 widths = pdf_begin_new_object(pdf);
+	printf("[ ");
+	for (u32 c = 32; c <= 255; c++) {
+		u16 glyph = get_glyph_index(font.cmap, c);
+		i32 glyph_advance = get_glyph_advance(font, glyph);
+		int advance = (glyph_advance * 1000) / font.upem;
+		fprintf(pdf->file, "%d ", advance);
+	}
+	printf(" ]\n");
+	pdf_end_object(pdf);
+
 	// Font object
 	i32 font_resource = pdf_begin_new_object(pdf);
 	fprintf(pdf->file,
@@ -504,18 +516,9 @@ static i32 pdf_embed_font(pdf_file *pdf, font font, i32 font_id)
 		"/BaseFont /F%d "
 		"/FontDescriptor %d 0 R "
 		"/FirstChar 32 "
-		"/LastChar 255 ",
-		font_id, font_descriptor);
-	fprintf(pdf->file, "/Widths [");
-
-	for (u32 c = 32; c <= 255; c++) {
-		u16 glyph = get_glyph_index(font.cmap, c);
-		i32 glyph_advance = get_glyph_advance(font, glyph);
-		int advance = (glyph_advance * 1000) / font.upem;
-		fprintf(pdf->file, "%d ", advance);
-	}
-
-	fprintf(pdf->file, "] >>\n");
+		"/LastChar 255 "
+		"/Width %d 0 R >>\n",
+		font_id, font_descriptor, widths);
 	pdf_end_object(pdf);
 	return font_resource;
 }
