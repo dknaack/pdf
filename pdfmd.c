@@ -504,14 +504,14 @@ static i32 pdf_embed_font(pdf_file *pdf, font font, i32 font_id)
 
 	// Characters widths
 	pdf_begin_object(pdf, widths);
-	printf("[ ");
+	fprintf(pdf->file, "[ ");
 	for (u32 c = 32; c <= 255; c++) {
 		u16 glyph = get_glyph_index(font.cmap, c);
 		i32 glyph_advance = get_glyph_advance(font, glyph);
 		int advance = (glyph_advance * 1000) / font.upem;
 		fprintf(pdf->file, "%d ", advance);
 	}
-	printf(" ]\n");
+	fprintf(pdf->file, " ]\n");
 	pdf_end_object(pdf);
 
 	// Font descriptor
