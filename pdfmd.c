@@ -484,20 +484,26 @@ static void pdf_stream_flush(pdf_stream *s, pdf_file *pdf)
 
 static i32 pdf_embed_font(pdf_file *pdf, font font, i32 font_id)
 {
-	// Font data stream
-	i32 font_stream = pdf_begin_new_object(pdf);
-	fprintf(pdf->file, "<< /Length %zd >>\nstream\n", font.data.length);
-	fwrite(font.data.at, 1, font.data.length, pdf->file);
-	fprintf(pdf->file, "endstream\n");
-	pdf_end_object(pdf);
+	i32 stream = pdf_new_object(pdf);
+	i32 descriptor = pdf_new_object(pdf);
+	i32 widths = pdf_new_object(pdf);
+	i32 object = pdf_new_object(pdf);
 
-	// Font descriptor
-	i32 font_descriptor = pdf_begin_new_object(pdf);
-	fprintf(pdf->file, "<< /Type /FontDescriptor /FontName /F%d /FontFile2 %d 0 R >>\n", font_id, font_stream);
+	// Font object
+	pdf_begin_object(pdf, object);
+	fprintf(pdf->file,
+		"<< /Type /Font "
+		"/Subtype /TrueType "
+		"/BaseFont /F%d "
+		"/FontDescriptor %d 0 R "
+		"/FirstChar 32 "
+		"/LastChar 255 "
+		"/Width %d 0 R >>\n",
+		font_id, descriptor, widths);
 	pdf_end_object(pdf);
 
 	// Characters widths
-	i32 widths = pdf_begin_new_object(pdf);
+	pdf_begin_object(pdf, widths);
 	printf("[ ");
 	for (u32 c = 32; c <= 255; c++) {
 		u16 glyph = get_glyph_index(font.cmap, c);
@@ -508,19 +514,18 @@ static i32 pdf_embed_font(pdf_file *pdf, font font, i32 font_id)
 	printf(" ]\n");
 	pdf_end_object(pdf);
 
-	// Font object
-	i32 font_resource = pdf_begin_new_object(pdf);
-	fprintf(pdf->file,
-		"<< /Type /Font "
-		"/Subtype /TrueType "
-		"/BaseFont /F%d "
-		"/FontDescriptor %d 0 R "
-		"/FirstChar 32 "
-		"/LastChar 255 "
-		"/Width %d 0 R >>\n",
-		font_id, font_descriptor, widths);
+	// Font descriptor
+	pdf_begin_object(pdf, descriptor);
+	fprintf(pdf->file, "<< /Type /FontDescriptor /FontName /F%d /FontFile2 %d 0 R >>\n", font_id, stream);
 	pdf_end_object(pdf);
-	return font_resource;
+
+	// Font data stream
+	pdf_begin_object(pdf, stream);
+	fprintf(pdf->file, "<< /Length %zd >>\nstream\n", font.data.length);
+	fwrite(font.data.at, 1, font.data.length, pdf->file);
+	fprintf(pdf->file, "endstream\n");
+	pdf_end_object(pdf);
+	return object;
 }
 
 int
