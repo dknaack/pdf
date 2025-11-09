@@ -368,7 +368,7 @@ static b32 is_space(char c)
 	return result;
 }
 
-static isize get_text_width(str s, font f)
+static isize measure_text(str s, font f)
 {
 	isize result = 0;
 	u16 prev = 0;
@@ -705,7 +705,7 @@ main(void)
 			}
 
 			str word = substr(text, begin, end);
-			isize word_width = get_text_width(word, fonts[font_id]);
+			isize word_width = measure_text(word, fonts[font_id]);
 			isize font_height = 9;
 			isize margin = 200;
 			if (font_height * (word_width + width) > (page_width - margin) * 1000) {
@@ -745,7 +745,7 @@ main(void)
 				end++;
 			}
 
-			width += word_width + get_text_width(S(" "), fonts[font_id]);
+			width += word_width + measure_text(S(" "), fonts[font_id]);
 			begin = end;
 		}
 
