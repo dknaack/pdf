@@ -51,6 +51,26 @@ typedef enum {
 	FONT_COUNT,
 } font_id;
 
+typedef enum {
+	TOKEN_NONE,
+	TOKEN_NEWLINE,
+	TOKEN_WHITESPACE,
+	TOKEN_BOLD,
+	TOKEN_ITALIC,
+	TOKEN_CODE,
+	TOKEN_WORD,
+	TOKEN_H1,
+	TOKEN_H2,
+	TOKEN_H3,
+	TOKEN_H4,
+	TOKEN_H5,
+} token_kind;
+
+typedef struct {
+	token_kind kind;
+	str value;
+} token;
+
 typedef struct pdf_object pdf_object;
 struct pdf_object {
 	pdf_object *next;
@@ -344,7 +364,7 @@ static f32 cm(f32 x)
 
 static b32 is_space(char c)
 {
-	b32 result = (c == ' ' || c == '\n' || c == '\r' || c == '\t' || c == '\f' || c == '\v');
+	b32 result = (c == ' ' || c == '\t' || c == '\f' || c == '\v');
 	return result;
 }
 
@@ -364,6 +384,93 @@ static isize get_text_width(str s, font f)
 		result += (advance * 1000) / f.upem;
 	}
 
+	return result;
+}
+
+static char peek_char(reader *r)
+{
+	if (r->pos < r->data.length) {
+		return r->data.at[r->pos];
+	} else {
+		return '\0';
+	}
+}
+
+static char get_char(reader *r)
+{
+	if (r->pos < r->data.length) {
+		return r->data.at[r->pos++];
+	} else {
+		return '\0';
+	}
+}
+
+static b32 accept_char(reader *r, char c)
+{
+	if (peek_char(r) == c) {
+		get_char(r);
+		return true;
+	} else {
+		return false;
+	}
+}
+
+static token get_token(reader *r)
+{
+	token result = {0};
+
+	isize begin = r->pos;
+	char c = get_char(r);
+	switch (c) {
+	case '*':
+	case '_':
+		if (peek_char(r) == c) {
+			get_char(r);
+			result.kind = TOKEN_BOLD;
+		} else {
+			result.kind = TOKEN_ITALIC;
+		}
+
+		break;
+	case '#':
+		if (r->pos == 0 || r->data.at[r->pos - 1] == '\n') {
+			get_char(r);
+			result.kind = TOKEN_H1;
+			while (result.kind < TOKEN_H5 && accept_char(r, '#')) {
+				result.kind++;
+			}
+		}
+
+		accept_char(r, ' ');
+		break;
+	case '\r':
+		accept_char(r, '\n');
+		/* fallthrough */
+	case '\n':
+		result.kind = TOKEN_NEWLINE;
+		break;
+	case ' ':
+		result.kind = TOKEN_WHITESPACE;
+		do {
+			get_char(r);
+		} while (is_space(peek_char(r)));
+		break;
+	}
+
+	if (result.kind == TOKEN_NONE) {
+		result.kind = TOKEN_WORD;
+		// TODO: Parsing words
+	}
+
+	isize end = r->pos;
+	result.value = substr(r->data, begin, end);
+	return result;
+}
+
+static token peek_token(reader *r)
+{
+	reader tmp = *r;
+	token result = get_token(&tmp);
 	return result;
 }
 
