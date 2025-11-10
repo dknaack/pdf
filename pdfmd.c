@@ -71,6 +71,36 @@ typedef struct {
 	str value;
 } token;
 
+typedef enum {
+	UNIT_PX,
+	UNIT_EM,
+	UNIT_PERCENT,
+	UNIT_COUNT
+} layout_unit;
+
+typedef struct {
+	layout_unit unit;
+	i32 value;
+} layout_size;
+
+typedef enum {
+	NODE_TEXT,
+	NODE_HBOX,
+	NODE_VBOX,
+} layout_node_kind;
+
+typedef struct layout_node layout_node;
+struct layout_node {
+	layout_node_kind kind;
+	layout_node *next;
+	layout_node *children;
+	str value;
+
+	layout_size size[2];
+	i32 computed_pos[2];
+	i32 computed_size[2];
+};
+
 typedef struct pdf_object pdf_object;
 struct pdf_object {
 	pdf_object *next;
